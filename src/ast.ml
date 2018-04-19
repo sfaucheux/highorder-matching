@@ -1,14 +1,20 @@
 open Lexing
 
 type context = string list
+
 type info = position * position
+
+type metavar = string
+
+type node_info =
+    | Real of info
+    | Substituted of metavar * node_info
+    | Pattern
 
 type rule_name = APP1 | APP2 | APPABS | APPFULL
 type rule = Rule of rule_name * info
 
-type metavar = string
-
-type node = { term:term; pos:info }
+type node = { term:term; pos:node_info }
 and term =
           | MAbs of node
           | FreeId of node
@@ -25,21 +31,20 @@ type expr = Expr of node * rule * expr list * info
 (* Useful constructors *)
 
 (* build a term with a dummy position *)
-let dummy_info = (Lexing.dummy_pos, Lexing.dummy_pos)
-let create_dum term = { term=term; pos=dummy_info }
+let create_pattern term = { term = term; pos = Pattern}
 
-let bound_id i = create_dum (BoundedId i)
-let app (t1, t2) = create_dum (App (t1, t2))
-let judgement (t1, t2) = create_dum (Judgement (t1, t2))
-let mabs t = create_dum (MAbs t)
-let lamb t = create_dum (Lamb t)
-let free_id f = create_dum (FreeId f)
-let mapp (t1, t2) = create_dum (MApp (t1,t2))
-let meta id = create_dum (Metavar id)
-
+let bound_id i = create_pattern (BoundedId i)
+let app (t1, t2) = create_pattern (App (t1, t2))
+let judgement (t1, t2) = create_pattern (Judgement (t1, t2))
+let mabs t = create_pattern (MAbs t)
+let lamb t = create_pattern (Lamb t)
+let free_id f = create_pattern (FreeId f)
+let mapp (t1, t2) = create_pattern (MApp (t1,t2))
+let meta id = create_pattern (Metavar id)
 let labs t = lamb (mabs t)
 
-let create_node t p = { term = t; pos = p }
+let create_node t p = { term = t; pos = Real p }
+
 let create_judg n1 n2 p =
     create_node (Judgement (n1, n2)) p
 let create_labs n p =
