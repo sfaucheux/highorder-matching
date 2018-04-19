@@ -120,8 +120,8 @@ let rec gen_projection id len n next =
 
 (* Generate all the possible imitations for an unary constructor
  * example:
- * M N O = ctora will generate a stream of substitutions for M made of:
- * \x.\y.ctorx, \x.\y.ctory, \x.\y.ctora *)
+ * M N O = ctor(a) will generate a stream of substitutions for M made of:
+ * \x.\y.ctor(x), \x.\y.ctor(y), \x.\y.ctor(a) *)
 let gen_un_imitation id len ctor node =
     let imitate n = create_n_abs len (ctor n) in
     let rec gen_imi n =
