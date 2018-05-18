@@ -12,7 +12,7 @@ type node = { term:term; pos:info }
 and term =
     | MAbs of node
     | FreeId of node
-    | BoundedId of int
+    | BoundId of int
     | Lamb of node
     | App of node * node
     | Judgement of node * node
@@ -31,7 +31,7 @@ and expr =
 let dummy_info = (Lexing.dummy_pos, Lexing.dummy_pos)
 let create_dum term = { term=term; pos=dummy_info }
 
-let bound_id i = create_dum (BoundedId i)
+let bound_id i = create_dum (BoundId i)
 let app (t1, t2) = create_dum (App (t1, t2))
 let judgement (t1, t2) = create_dum (Judgement (t1, t2))
 let mabs t = create_dum (MAbs t)
@@ -51,8 +51,8 @@ let create_app n1 n2 p =
     create_node (App (n1, n2)) p
 let create_free_id id p =
     create_node (FreeId (create_node (Id id) p)) p
-let create_bounded_id id p =
-    create_node (BoundedId id) p
+let create_bound_id id p =
+    create_node (BoundId id) p
 
 (* Print functions *)
 let rec print_node isolate n =
@@ -71,7 +71,7 @@ let rec print_node isolate n =
     | MApp (n1, n2) ->
             (print_node true n1) ^ "[" ^ (print_node false n2) ^ "]"
     | MAbs n -> "{" ^ (print_node false n) ^ "}"
-    | BoundedId id -> string_of_int id
+    | BoundId id -> string_of_int id
     | Metavar id ->  id
     | Id id -> id
 

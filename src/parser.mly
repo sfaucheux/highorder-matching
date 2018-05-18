@@ -66,7 +66,7 @@ id:
             | [] -> Ast.create_free_id id ($startpos, $endpos)
             | h :: t ->
                     if h = id then
-                        Ast.create_bounded_id n ($startpos, $endpos)
+                        Ast.create_bound_id n ($startpos, $endpos)
                     else
                         lookup (n+1) t
         in lookup 0

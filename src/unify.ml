@@ -55,10 +55,10 @@ let rec apply_sub sub node =
     | Judgement (t1, t2) -> update (Judgement (app t1, app t2))
     | Metavar id when id = sub.id -> { term = sub.sub; pos = sub.info }
     | Metavar _
-    | BoundedId _
+    | BoundId _
     | Id _ -> node
 
-(* Substitute bounded variable by sub in the given node *)
+(* Substitute bound variable by sub in the given node *)
 let rec substite_bound sub n node =
     let app = substite_bound sub n in
     let update t = { node with term = t } in
@@ -68,10 +68,10 @@ let rec substite_bound sub n node =
     | App (t1, t2) -> update (App (app t1, app t2))
     | MApp (t1, t2) -> update (MApp (app t1, app t2))
     | Judgement (t1, t2) ->update  (Judgement (app t1, app t2))
-    | BoundedId id when id = n -> sub
+    | BoundId id when id = n -> sub
     | Metavar _ 
     | FreeId _
-    | BoundedId _
+    | BoundId _
     | Id _ -> node
 
 (* Reduce a term to its normal form by applying full beta-reduction *)
@@ -92,7 +92,7 @@ let rec reduce node =
     | App (t1, t2) -> update (App (reduce t1, reduce t2))
     | Judgement (t1, t2) -> update (Judgement (reduce t1, reduce t2))
     | Metavar _
-    | BoundedId _
+    | BoundId _
     | FreeId _
     | Id _ -> node
 
@@ -108,7 +108,7 @@ let rec create_n_abs n node =
     | _ -> mabs (create_n_abs (n - 1) node)
 
 (* Generate all the possible projections by returning a stream of all the
- * possible bounded variables nested n times in an abstraction.
+ * possible bound variables nested n times in an abstraction.
  * next is a shorthand to concatenate one stream at the end without adding the
  * concat_stream indirection *)
 let rec gen_projection id len n next =
@@ -177,7 +177,7 @@ let gen_app_subs id len node =
     | FreeId n -> gen_unary_subs id free_id len n
     | App (n1, n2) -> gen_binary_subs id app len n1 n2
     | Judgement (n1, n2) -> gen_binary_subs id judgement len n1 n2
-    | BoundedId _
+    | BoundId _
     | Id _ -> gen_nullary_subs id len node
     | MApp _
     | Metavar _ -> raise NonMatchingProblem
@@ -206,7 +206,7 @@ let rec unify_one (left, right) =
             unify [(n1, n2); (n1', n2')]
     | FreeId id1, FreeId id2 ->
             unify_one (id1, id2)
-    | BoundedId id1, BoundedId id2 ->
+    | BoundId id1, BoundId id2 ->
             if id1 = id2 then create_eos [] else None
     | Id id1, Id id2 -> 
             if id1 = id2 then create_eos [] else None
