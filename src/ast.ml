@@ -10,17 +10,20 @@ type metavar = string
 
 type node = { term:term; pos:info }
 and term =
-          | MAbs of node
-          | FreeId of node
-          | BoundedId of int
-          | Lamb of node
-          | App of node * node
-          | Judgement of node * node
-          | Metavar of metavar
-          | MApp of node * node
-          | Id of string
+    | MAbs of node
+    | FreeId of node
+    | BoundedId of int
+    | Lamb of node
+    | App of node * node
+    | Judgement of node * node
+    | Metavar of metavar
+    | MApp of node * node
+    | Id of string
  
-type expr = Expr of node * rule * expr list * info
+type iexpr = node * rule * expr list * info
+and expr =
+    | Expr of iexpr
+    | AExpr of iexpr
 
 (* Useful constructors *)
 

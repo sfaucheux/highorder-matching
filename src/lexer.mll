@@ -43,8 +43,8 @@ rule token = parse
           | '.'                 { DOT }
           | '('                 { LPAREN }
           | ')'                 { RPAREN }
-          (*| '['                 { LSBRA }
-          | ']'                 { RSBRA }*)
+          | '['                 { LSBRA }
+          | ']'                 { RSBRA }
           | '"'                 { DQUOTE }
           | eof                 { EOF }
           | _                   { lex_error "Unexpected char: " lexbuf }
