@@ -58,16 +58,34 @@ let rec apply_sub sub node =
     | BoundId _
     | Id _ -> node
 
+(* shift indices by d from the c one *)
+let rec shift d c node =
+    let app = shift d c in
+    let updated = 
+        match node.term with
+        | MAbs t -> (shift d (c + 1) t).term
+        | Lamb t -> Lamb (app t)
+        | App (t1, t2) -> App (app t1, app t2)
+        | MApp (t1, t2) -> MApp (app t1, app t2)
+        | Judgement (t1, t2) -> Judgement (app t1, app t2)
+        | BoundId id when id >= c -> BoundId (id + d)
+        | BoundId _
+        | Metavar _ 
+        | FreeId _
+        | Id _ -> node.term
+    in
+    { node with term = updated }
+
 (* Substitute bound variable by sub in the given node *)
 let rec substite_bound sub n node =
     let app = substite_bound sub n in
     let update t = { node with term = t } in
     match node.term with
-    | MAbs t -> update (MAbs (substite_bound sub (n+1) t))
+    | MAbs t -> update (MAbs (substite_bound (shift 1 0 sub) (n+1) t))
     | Lamb t -> update (Lamb (app t))
     | App (t1, t2) -> update (App (app t1, app t2))
     | MApp (t1, t2) -> update (MApp (app t1, app t2))
-    | Judgement (t1, t2) ->update  (Judgement (app t1, app t2))
+    | Judgement (t1, t2) ->update (Judgement (app t1, app t2))
     | BoundId id when id = n -> sub
     | Metavar _ 
     | FreeId _
@@ -84,8 +102,10 @@ let rec reduce node =
             let right = reduce t2 in
             begin match left.term with
             | MAbs t ->
-                    let sub = reduce (substite_bound right 0 t) in
-                    { term = sub.term; pos = right.pos }
+                    let sub =
+                        shift (-1) 0 (substite_bound (shift 1 0 right) 0 t)
+                    in
+                    { term = (reduce sub).term; pos = right.pos }
             | _ -> update (MApp (left, right))
             end
     | Lamb t1 -> update (Lamb (reduce t1))
