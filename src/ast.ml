@@ -19,11 +19,10 @@ and term =
     | Metavar of metavar
     | MApp of node * node
     | Id of string
- 
-type iexpr = node * rule * expr list * info
-and expr =
-    | Expr of iexpr
-    | AExpr of iexpr
+
+type expr =
+    | Expr of node * rule * expr list * info
+    | AExpr of expr * info
 
 (* Useful constructors *)
 

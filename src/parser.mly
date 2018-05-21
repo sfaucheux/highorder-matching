@@ -27,19 +27,17 @@ rule:
     name = RULENAME
     { Rule (name, ($startpos, $endpos)) }
 
-%inline iexpr:
+
+expr:
     e1 = judgement BY e2 = rule LBRA e3 = separated_list(SEMI, expr) RBRA
     {
         fun ctx ->
-            (e1 ctx, e2, List.map (fun e -> e ctx) e3, ($startpos, $endpos))
+            Expr (e1 ctx, e2, List.map (fun e -> e ctx) e3, ($startpos, $endpos))
     }
-
-expr:
-    e = iexpr { fun ctx -> Expr (e ctx) }
-    | LPAREN id = ID RPAREN LSBRA e = iexpr RSBRA
+    | LPAREN id = ID RPAREN LSBRA e = expr RSBRA
     {
         fun ctx ->
-            AExpr (e (id :: ctx))
+            AExpr (e (id :: ctx), ($startpos, $endpos))
     }
 
 judgement:

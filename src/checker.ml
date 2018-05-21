@@ -6,12 +6,14 @@ exception Premise_num_error of int * int
 
 
 let check_deriv pattern exprs concl =
-    try
-        let pair_expr node expr =
-            match expr with
-            | Expr(judg, _, _, _) -> (node, judg)
-            | AExpr(judg, _, _, pos) -> (node, create_node (MAbs judg) pos)
+    let pair_expr node expr =
+        let rec extract_concl = function
+            | Expr(judg, _, _, _) -> judg
+            | AExpr(expr, pos) -> create_node (MAbs (extract_concl expr)) pos
         in
+        (node, extract_concl expr)
+    in
+    try
         let constraints = List.map2 pair_expr pattern exprs in
         unify (concl :: constraints)
     with Invalid_argument _ ->
@@ -65,8 +67,12 @@ let match_rule concl exprs rule =
             check_deriv pattern exprs (concl_pattern, concl)
 
 let rec check_ast ast =
-    let expr = match ast with Expr e | AExpr e -> e in
-    let (concl, (Rule(rule, _)), exprs, pos) = expr in
+    let rec get_inner_expr expr =
+        match expr with
+        | Expr (concl, rule, exprs, pos) -> (concl, rule, exprs, pos)
+        | AExpr (e, _) -> get_inner_expr e
+    in
+    let (concl, (Rule(rule, _)), exprs, pos) = get_inner_expr ast in
     try
         let result = match_rule concl exprs rule in
         match result with

@@ -1,6 +1,6 @@
 "\w.z ((\x.x) y) w -> \w.z y w" by E-AppFull {
-    (z)[
-        "z ((\x.x) y) z -> z y z" by E-App1 {
+    (t)[
+        "z ((\x.x) y) t -> z y t" by E-App1 {
             "z ((\x.x) y) -> z y" by E-App2 {
                 "(\x.x) y -> y" by E-AppAbs {}
             }
