@@ -63,7 +63,7 @@ let rec shift d c node =
     let app = shift d c in
     let updated = 
         match node.term with
-        | MAbs t -> (shift d (c + 1) t).term
+        | MAbs t -> MAbs (shift d (c + 1) t)
         | Lamb t -> Lamb (app t)
         | App (t1, t2) -> App (app t1, app t2)
         | MApp (t1, t2) -> MApp (app t1, app t2)
