@@ -283,10 +283,9 @@ and print_subs = function
 and print_constraint c =
     match c with
     | (l, r) :: tl ->
-            print_string ((print_node false l) ^ " <=> " ^ (print_node false r));
-            print_newline ();
-            print_constraint tl
-    | [] -> ()
+            (print_node false l) ^ " <=> " ^ (print_node false r) ^
+            "\n" ^ (print_constraint tl)
+    | [] -> ""
 
 
 (* evaluate the stream of solutions to print it *)
