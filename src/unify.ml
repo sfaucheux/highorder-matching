@@ -143,6 +143,7 @@ let rec gen_projection id len n next =
  * M N O = ctor(a) will generate a stream of substitutions for M made of:
  * \x.\y.ctor(x), \x.\y.ctor(y), \x.\y.ctor(a) *)
 let gen_un_imitation id len ctor node =
+    let shifted = shift len 0 node in
     let imitate n = create_n_abs len (ctor n) in
     let rec gen_imi n =
         match n with
@@ -151,7 +152,7 @@ let gen_un_imitation id len ctor node =
             let next () = gen_imi (n + 1) in
             create_stream [bind_meta id current] next
     (* add the given node as the first solution *)
-    in create_stream [bind_meta id (imitate node)] (fun () -> gen_imi 0)
+    in create_stream [bind_meta id (imitate shifted)] (fun () -> gen_imi 0)
 
 (* Same thing for binary constructors, it generates a stream of all the
  * possible pairs made of variables or the node itself, example:
@@ -159,6 +160,8 @@ let gen_un_imitation id len ctor node =
  * \x.\y.ctor(x, x), \x.\y.ctor(x, y)..., \x.\y.ctor(a, x)..., \x.\y.ctor(a, b)
  * *)
 let gen_bin_imitation id len ctor n1 n2 =
+    let s1 = shift len 0 n1 in
+    let s2 = shift len 0 n2 in
     let imitate n1 n2 = create_n_abs len (ctor (n1, n2)) in
     let rec gen_imi n m =
         match n, m with
@@ -166,8 +169,8 @@ let gen_bin_imitation id len ctor n1 n2 =
         | i1, i2 when i1 = len + 1 && i2 = len + 1 -> None
         | i1, i2 when i2 = len + 1 -> gen_imi (n + 1) 0
         | _ -> 
-            let left = if n = len then n1 else (bound_id n) in
-            let right = if m = len then n2 else (bound_id m) in
+            let left = if n = len then s1 else (bound_id n) in
+            let right = if m = len then s2 else (bound_id m) in
             let current = imitate left right in
             let next () = gen_imi n (m + 1) in
             create_stream [bind_meta id current] next
@@ -185,7 +188,8 @@ let gen_binary_subs id ctor len t1 t2 =
         
 (* For a constant, just build one imitation and the projections *)
 let gen_nullary_subs id len node =
-    let imitation = create_eos [bind_meta id (create_n_abs len node)] in
+    let shifted = shift len 0 node in
+    let imitation = create_eos [bind_meta id (create_n_abs len shifted)] in
     gen_projection id len 0 imitation
 
 (* Get all the possible substitutions when an application is matched against

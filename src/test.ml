@@ -9,6 +9,7 @@ let should_pass constraints =
     match r with
     | Some s ->
             print_string (print_constraint constraints);
+            print_string (print_subs s.guess);
             print_string "OK (accepted)\n"
     | None ->
             raise (AcceptFail (print_constraint constraints))
@@ -28,10 +29,15 @@ let _ =
         should_fail [(fid "id1", fid "id2")];
         should_pass
         [(mapp (mapp (meta "M", fid "x"), fid "y"), app (fid "x", fid "y"));
-         (mapp (mapp (meta "M", fid "y"), fid "x"), app (fid "y", fid "x"))]
+         (mapp (mapp (meta "M", fid "y"), fid "x"), app (fid "y", fid "x"))];
+        should_pass
+        [(mabs (mabs (mapp (mapp (meta "M", bound_id 0), bound_id 1))),
+          mabs (mabs (app (bound_id 0, bound_id 1))));
+         (mabs (mabs (mapp (mapp (meta "M", bound_id 1), bound_id 0))),
+          mabs (mabs (app (bound_id 1, bound_id 0))))]
     with
     | AcceptFail str ->
-            print_string ("Fail:\n" ^ str ^ " must be accepted.")
+            print_string ("Fail:\n" ^ str ^ "must be accepted.\n")
     | RejectFail (sol, str) ->
-            print_string ("Fail:\n" ^ str ^ " must be rejected. solutions:\n ");
+            print_string ("Fail:\n" ^ str ^ "must be rejected. solutions:\n ");
             print_stream 1 sol
