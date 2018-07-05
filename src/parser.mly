@@ -14,9 +14,9 @@
 %start entrypoint
 
 %type <Ast.expr> entrypoint
-%type <Ast.context -> Ast.expr> expr
+%type <string list -> Ast.expr> expr
 %type <Ast.rule> rule
-%type <Ast.context -> Ast.node> term judgement
+%type <string list -> Ast.node> term judgement
 
 %%
 

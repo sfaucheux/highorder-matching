@@ -1,0 +1,75 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{fullpage}
+\usepackage{titlesec}
+\setlength\parindent{0pt}
+\newcommand{\ifm}[1]{\text{if $#1$}}
+\newcommand{\form}[1]{\text{for $#1$}}
+\newcommand\HN{\mathit{HN}}
+\newcommand\HNU{\mathit{HNU}}
+
+\titleformat*{\section}{\normalsize\bfseries}
+\begin{document}
+\title{ High-order matching and head normalization }
+
+\author{Faucheux Sébastien}
+\maketitle
+\section{Grammar}
+$X_i$ is an unknown meta-variable of arity $i$.\\
+$C_n$ is an arbitrary constructor with a known arity $n$.\\
+$c$ is a constant (can be free variables), $x$ should be bound by an enclosing lambda.\\
+\begin{align*}
+M &::= x \mid c \mid \lambda x.M \mid M\ N \mid X_n[M_1, \ldots, M_n] \mid C_n(M_1,\dots, M_n)\\
+\mathit{Ctx}_n &::= \pi_i (1 \leq i \leq n) \mid c \mid \lambda x.X_n \mid X_n\ Y_n \mid C_n(X_n,\dots, Y_n)\\
+S &::= \cdot \mid [X_n \rightarrow \mathit{Ctx}_n]S
+F &::= \cdot \mid F S
+\end{align*}
+\section{Head normalization}
+This function takes a term and a list of solutions and return the head-normalized term
+\begin{align*}
+\HN(S_0, M) &= \HN'(S_0, M)\\
+\HN'(\cdot, M) &= M\\
+\HN'([X_n \rightarrow \pi_i]S, X_n[M_1, \ldots M_n]) &= \HN'(S_0, M_i)\\
+\HN'([X_n \rightarrow c]S, X_n[M_1,\ldots ,M_n]) &= c\\
+\HN'([X_n \rightarrow \lambda x.Yn]S, X_n[M_1,\ldots ,M_n]) &= \lambda x.Yn[x, M_1,\ldots ,M_n]\\
+\HN'([X_n \rightarrow Y_n\ Z_n]S, X_n[M_1,\ldots ,M_n]) &= (Y_n[M_1,\ldots ,M_n]) (Z_n[M_1,\ldots ,M_n])\\
+\HN'([X_n \rightarrow C_n(Y_n, \dots, Z_n)]S, X_n[M_1,\ldots ,M_n]) &= C_n(Y_n[M_1,\ldots ,M_n],\dots,Z_n[M_1,\ldots ,M_n])\\
+\HN'([X_n \rightarrow \mathit{Ctx}_n]S, Y_n[M_1,\ldots ,M_n]) &= \HN'(S,Yn[M_1,\ldots ,M_n]) &\ifm{X_n \neq Y_n}\\
+    \HN'(S, M) &= M &\text{Otherwise}
+\end{align*}
+
+\section{Context}
+This function build the context associated to a term. Since substitutions are capture-avoiding, the context of a bound variable has no sense.
+\begin{align*}
+  Ctx(x) &= undef\\
+  Ctx(c) &= c\\
+  Ctx(\lambda x.M) &= \lambda x.X_n &(\text{for fresh $X_n$})\\
+  Ctx(M\ N) &= X_n\ Y_n &(\text{for fresh $X_n\ Y_n$})\\
+  Ctx(C_n(M_1, \dots, M_n)) &= C_n(X_n, \dots, Y_n) &(\text{for fresh $X_n, \dots, Y_n$})
+\end{align*}
+
+\section{Matching}
+\begin{align*}
+    \HNU(M_1, M_2, F) &= U(\HN(M_1, S), M_2, S)\\\\
+  U(x, x, S) &= \{S\}\\
+  U(c, c, S) &= \{S\}\\
+  U(\lambda x.M_1, \lambda x.M_2, S) &= \HNU(M_1, M_2, S)\\
+  U(M_1\ N_1, M_2\ N_2, S) &=
+      \bigcup_{S’}{\HNU(N_1, N_2, S’)}\ \form{S' \in \HNU(M_1, M_2, S)}\\
+    U(C_n(M_1, \dots, M_n), C_n(N_1, \dots, N_n), S) &= S_n\ \span{\text{where}\ 
+      S_i = \bigcup_{S' \in S_{i-1}}{\HNU(M_i, N_i, S')}\ \text{and}\ S_0 = \{S\}}\\
+  U(X_n[M_1,\ldots ,M_n], M, S) &=   
+     \bigcup_{S_i}\{\HNU(X_n[M_1,\ldots ,M_n],M,S_i) \mid 0 \leq i \leq n\}
+     \shortintertext{when $M$ is not of the form $Yn[\ldots]$ and where}
+     S_0 &= [X_n \rightarrow Ctx(M)]S &(imitation)\\
+     S_i &= [X_n \rightarrow \pi_i]S\ (\form{i > 0)} &\text{(projection)}\\\\
+  U(M, N, S) &= \{\} &\text{(no solution)}\\\\\\
+ % (* possible optimization *)
+ % U(X[], M, S) = {[X0 \rightarrow M]S} (\ifm{M is closed}})
+\end{align*}
+
+\end{document}
