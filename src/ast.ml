@@ -2,7 +2,7 @@ open Lexing
 
 type info = position * position
 
-type rule_name = APP1 | APP2 | APPABS | APPFULL
+type rule_name = APP1 | APP2 | APPABS | APPFULL | LETREC
 type rule = Rule of rule_name * info
 
 type metavar = int
@@ -12,6 +12,7 @@ and term =
     (* Abstractions *)
     | Mabs of node
     | Labs of node
+    | LetRec of node * node
     (* Constructors *)
     | App of node * node
     | Judgement of node * node
@@ -25,6 +26,7 @@ type context =
     | CStr of string
     | Cabs of metavar
     | CLabs of metavar
+    | CLetRec of metavar * metavar
     | CFreeId of metavar
     | CApp of metavar * metavar
     | CJudgment of metavar * metavar
@@ -57,7 +59,8 @@ let labs t = create_dum (Labs t)
 (*let lamb t = create_dum (Lamb t)*)
 let free_id f = create_dum (FreeId f)
 let astr s = create_dum (AStr s)
-let app (t1, t2) = create_dum (App (t1,t2))
+let app (t1, t2) = create_dum (App (t1, t2))
+let letrec (t1, t2) = create_dum (LetRec (t1, t2))
 let meta (id, par) = create_dum (Metavar (id, par))
 let fmeta id = create_dum (Metavar (id, []))
 
@@ -66,6 +69,8 @@ let create_judg n1 n2 p =
     create_node (Judgement (n1, n2)) p
 let create_labs n p =
     create_node (Labs n) p
+let create_letrec n1 n2 p =
+    create_node (LetRec (n1, n2)) p
 let create_app n1 n2 p =
     create_node (App (n1, n2)) p
 let create_free_id id p =
@@ -78,6 +83,7 @@ let rule_name = function
     | APP2 -> "E-App2"
     | APPABS -> "E-AppAbs"
     | APPFULL -> "E-AppFull"
+    | LETREC -> "E-LetRec"
 
 let print_info inf = 
     let b, e = inf in

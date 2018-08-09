@@ -59,12 +59,24 @@ let match_rule concl exprs rule =
             check_deriv [] [] (concl_pattern, concl)
     | APPFULL ->
             let m = meta (0, [bound_id 0]) in
-            let n = meta (1, [bound_id 0])in
+            let n = meta (1, [bound_id 0]) in
             (* premise: (x) [M[x] -> N[x]] *)
             (* conclusion: \(x)[M[x]] -> \(x)[N[x]] *)
             let pattern = [mabs (judgement (m, n))] in
             let concl_pattern = judgement (labs m, labs n) in
             check_deriv pattern exprs (concl_pattern, concl)
+    | LETREC ->
+            let e1_xy = meta (0, [bound_id 1; bound_id 0]) in
+            let e2 = meta (1, [bound_id 0]) in
+            let e1_xz = meta (0, [bound_id 0; bound_id 1]) in
+            let concl_pattern =
+                (* let rec x y = E1[x,y] in E2[x] ->
+                 * E2[\z. let rec x y = E1[x,z] in E1[x,z]]*)
+                judgement (letrec (e1_xy, e2),
+                meta (1, [labs (letrec (e1_xy, e1_xz))]))
+            in
+            check_deriv [] [] (concl_pattern, concl)
+
 
 let current = ref 0
 (* substitute without shift *)
@@ -72,6 +84,9 @@ let rec substitute_node id sub node =
     let app = substitute_node id sub in
     let updated = 
         match node.term with
+        | LetRec (t1, t2) ->
+               LetRec (substitute_node (id + 2) sub t1,
+                       substitute_node (id + 1) sub t2)
         | Mabs t -> Mabs (substitute_node (id + 1) sub t)
         | Labs t -> Labs (substitute_node (id + 1) sub t)
         | App (t1, t2) -> App (app t1, app t2)

@@ -3,6 +3,7 @@
 %token LSBRA RSBRA
 %token BY
 %token LAMBDA
+%token LETREC EQ IN
 %token DOT
 %token IS
 %token SEMI
@@ -47,6 +48,8 @@ judgement:
 term:
     LAMBDA id = ID DOT t = term
     { fun ctx -> Ast.create_labs (t (id :: ctx)) ($startpos, $endpos)}
+    | LETREC x = ID y = ID EQ t1 = term IN t2 = term
+    { fun ctx -> Ast.create_letrec (t1 (y :: x :: ctx)) (t2 (x :: ctx)) ($startpos, $endpos)}
     | e = app
     { e }
 

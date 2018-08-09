@@ -1,4 +1,4 @@
-"\w.z ((\x.x) y) w -> \w.z y w" by E-AppFull {
+(*"\w.z ((\x.x) y) w -> \w.z y w" by E-AppFull {
     (w)[
         "z ((\x.x) w) w -> z w w" by E-App1 {
             "z ((\x.x) w) -> z w" by E-App2 {
@@ -6,4 +6,6 @@
             }
         }
     ]
-}
+}*)
+
+"letrec x y = x (x y) in x z -> (\w.letrec x y = x (x y) in x (x w)) z" by E-LetRec {}

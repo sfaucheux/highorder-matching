@@ -17,6 +17,8 @@ let print_mabs node =
     "()[ " ^ node ^ " ]"
 let print_app n1 n2 =
     "(" ^ n1 ^ " " ^ n2 ^ ")"
+let print_letrec n1 n2 =
+    "let () () = " ^ n1 ^ " in " ^ n2
 let print_judg n1 n2 =
     n1 ^ " -> " ^ n2
 let print_labs node =
@@ -28,6 +30,8 @@ let rec print_node n =
     (*| Lamb { term = Mabs n; } -> "\\." ^ (print_node false n)*)
     | Labs n ->
             print_labs (print_node n)
+    | LetRec (n1, n2) ->
+            print_letrec (print_node n1) (print_node n2)
     | App (n1, n2) ->
             print_app (print_node n1) (print_node n2)
     | Judgement(n1, n2) ->
@@ -53,6 +57,7 @@ let rec print_ctx_gen meta_printer ctx =
     (* constructors *)
     | CLabs m -> print_labs (meta_printer m)
     | CApp (m1, m2) -> print_app (meta_printer m1) (meta_printer m2)
+    | CLetRec (m1, m2) -> print_letrec (meta_printer m1) (meta_printer m2)
     | CJudgment (m1, m2) -> print_judg (meta_printer m1) (meta_printer m2)
     | Closed node -> (print_node node)
 

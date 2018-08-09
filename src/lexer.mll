@@ -35,8 +35,12 @@ rule token = parse
           | "E-App2"            { RULENAME APP2 }
           | "E-AppAbs"          { RULENAME APPABS }
           | "E-AppFull"         { RULENAME APPFULL }
+          | "E-LetRec"          { RULENAME LETREC }
+          | "letrec"            { LETREC }
+          | "in"                { IN }
           | ['a'-'z']+ as id    { ID id }
           | ';'                 { SEMI }
+          | '='                 { EQ }
           | '{'                 { LBRA }
           | '}'                 { RBRA }
           | '\\'                { LAMBDA }

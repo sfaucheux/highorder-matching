@@ -19,6 +19,7 @@ let rec is_closed node idx =
     match node.term with
     | Mabs n -> is_closed n (idx + 1)
     | Labs n -> is_closed n (idx + 1)
+    | LetRec (n1, n2) -> (is_closed n1 (idx + 2)) && (is_closed n2 (idx + 1))
     | App (n1, n2)
     | Judgement (n1, n2) -> (is_closed n1 idx) && (is_closed n2 idx)
     | BoundId id when id >= idx -> false
@@ -33,7 +34,8 @@ let rec shift d c node =
     let updated = 
         match node.term with
         | Mabs t -> Mabs (shift d (c + 1) t)
-        | Labs t -> Labs  (shift d (c + 1) t)
+        | Labs t -> Labs (shift d (c + 1) t)
+        | LetRec (t1, t2) -> LetRec (shift d (c + 2) t1, shift d (c + 1) t2)
         | App (t1, t2) -> App (app t1, app t2)
         | Judgement (t1, t2) -> Judgement (app t1, app t2)
         | BoundId id when id >= c -> BoundId (id + d)
@@ -64,6 +66,10 @@ let head_normalize full_sols t =
                                     mabs (meta (m, shift_param par))
                             | CLabs m ->
                                     labs (meta (m, shift_param par))
+                            | CLetRec (m1,m2) ->
+                                    let par1 = shift_param par in
+                                    let par2 = shift_param par1 in
+                                    letrec (meta (m1, par2), meta (m2, par1))
                             | Proj n ->
                                     hn full_sols (List.nth par n)
                             | CStr s ->
@@ -86,6 +92,7 @@ let head_normalize full_sols t =
 let context = function
     | FreeId c -> Some (CFreeId (pick_fresh_name ()))
     | Mabs _ -> Some (Cabs (pick_fresh_name ()))
+    | LetRec _ -> Some (CLetRec (pick_fresh_name (), pick_fresh_name ()))
     | App _ -> Some (CApp (pick_fresh_name (), pick_fresh_name ()))
     | Judgement _ -> Some (CJudgment (pick_fresh_name (), pick_fresh_name ()))
     | Labs _ -> Some (CLabs (pick_fresh_name ()))
@@ -122,6 +129,7 @@ let rec unify_one (left, right) sols =
     | Labs n1, Labs n2
     | Mabs n1, Mabs n2 ->
             unify_one (n1, n2) sols
+    | LetRec (m1, n1), LetRec (m2, n2)
     | App (m1, n1), App (m2, n2)
     | Judgement (m1, n1), Judgement (m2, n2) ->
             unify_head (m1, m2) [(n1, n2)] (create_eos sols)
