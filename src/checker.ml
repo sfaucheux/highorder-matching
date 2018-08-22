@@ -3,147 +3,161 @@ open Unify
 
 (* functions to check the number of premises *)
 exception Premise_num_error of int * int
+exception AbsError of int * int * info
 
-
-let check_deriv pattern exprs concl =
-    let pair_expr node expr =
-        let rec extract_concl = function
-            | Expr(judg, _, _, _) -> judg
-            | AExpr(expr, pos) -> create_node (Mabs (extract_concl expr)) pos
-        in
-        (node, extract_concl expr)
-    in
-    try
-        let constraints = List.map2 pair_expr pattern exprs in
-        unify (concl :: constraints)
-    with Invalid_argument _ ->
-        raise (Premise_num_error (List.length exprs, List.length pattern))
-
-let match_rule concl exprs rule =
+let match_rule concl premises rule =
     match rule with
     | APP1 ->
             (* premise: M -> N *)
             (* conclusion: M T -> N T *)
-            let pattern = [ judgement (fmeta 0, fmeta 1)] in
-            let concl_pattern =
-                judgement (app (fmeta 0, fmeta 2), app (fmeta 1, fmeta 2))
+            (* match conclusion *)
+            let (c1, c2) =
+                match concl with
+                | DeriveTo (c1, c2, _) -> (c1, c2)
+                (* | _ -> error *)
             in
-            check_deriv pattern exprs (concl_pattern, concl)
+            let (p1, p2, ctx_len) =
+                match premises with
+                (* get the number of nested abstractions (ctx_len) for each
+                 * premise *)
+                | [(ctx_len, (e1, _, _, pos))] ->
+                        if ctx_len <> 0 then raise (AbsError (ctx_len, 0, pos));
+                        begin match e1 with
+                        | DeriveTo (p1, p2, _) -> (p1, p2, ctx_len)
+                        (*| _ -> judg_error*)
+                        end
+                | _ -> raise (Premise_num_error (List.length premises, 1))
+            in
+            let pp1, pp2 = (fmeta 0, fmeta 1) in
+            let cp1, cp2 = (app (fmeta 0, fmeta 2), app (fmeta 1, fmeta 2)) in
+            (* When matching a premise, pass the number of nested abstractions
+             * aroud the tree as threshold, the solver will thus seen the
+             * variables as bound *)
+            unify [(cp1, c1, 0); (cp2, c2, 0); (pp1, p1, ctx_len); (pp2, p2, ctx_len)]
     | APP2 ->
             (* this rule is actually 2 *)
-            (* conditions on fmetavar are not yet supported *)
+            (* conditions on metavar are not supported *)
 
             (* premise: M -> N *)
             (* conclusion: v M -> v N *)
-            let of_normal v =
-                judgement (app (v, fmeta 0), app (v, fmeta 1))
+            let (c1, c2) =
+                match concl with
+                | DeriveTo (c1, c2, _) -> (c1, c2)
+                (* | _ -> error *)
+            in
+            let (p1, p2, ctx_len) =
+                match premises with
+                | [(ctx_len, (e1, _, _, pos))] ->
+                        if ctx_len <> 0 then raise (AbsError (ctx_len, 0, pos));
+                        begin match e1 with
+                        | DeriveTo (p1, p2, _) -> (p1, p2, ctx_len)
+                        (*| _ -> judg_error*)
+                        end
+                | _ -> raise (Premise_num_error (List.length premises, 1))
+            in
+            let concl_pattern v =
+                (app (v, fmeta 0), app (v, fmeta 1))
             in 
             (* for v = free id *)
-            let free = free_id (fmeta 2) in
-            let pattern = [judgement (fmeta 0, fmeta 1)] in
-            let concl_pattern1 = of_normal free in
-            begin match check_deriv pattern exprs (concl_pattern1, concl) with
-            | Some s -> Some s
+            let variable = lvar (fmeta 2) in
+            let pp1, pp2 = (fmeta 0, fmeta 1) in
+            let cp1, cp2 = concl_pattern variable in
+            let r1 = unify [(cp1, c1, 0); (cp2, c2, 0); (pp1, p1, ctx_len); (pp2, p2, ctx_len)] in
+            begin match r1 with
             | None ->
                     (* for v = (\x.T) *)
                     let abs = labs (fmeta 2) in
-                    let concl_pattern2 = of_normal abs in
-                    check_deriv pattern exprs (concl_pattern2, concl)
+                    let (cp1, cp2) = concl_pattern abs in
+                    unify [(cp1, c1, 0); (cp2, c2, 0); (pp1, p1, ctx_len); (pp2, p2, ctx_len)]
+            | _ -> r1
             end
     | APPABS ->
-            let concl_pattern =
-                (* conclusion: \(x)[M[x]] N -> M[N] *)
-                judgement (app (labs (meta (0, [bound_id 0])), fmeta 1),
-                           meta (0, [fmeta 1]))
+            (* conclusion: \(x)[M[x]] N -> M[N] *)
+            let (c1, c2) =
+                match concl with
+                | DeriveTo (c1, c2, _) -> (c1, c2)
+                (* | _ -> error *)
             in
-            check_deriv [] [] (concl_pattern, concl)
+            let () =
+                match premises with
+                | [] -> ()
+                | _ -> raise (Premise_num_error (List.length premises, 0))
+            in
+            let cp1 = app (labs (meta (0, [lvarvar 0])), fmeta 1) in
+            let cp2 = meta (0, [fmeta 1]) in
+            unify [(cp1, c1, 0); (cp2, c2, 0)]
     | APPFULL ->
-            let m = meta (0, [bound_id 0]) in
-            let n = meta (1, [bound_id 0]) in
+            let (c1, c2) =
+                match concl with
+                | DeriveTo (c1, c2, _) -> (c1, c2)
+                (* | _ -> judg error *)
+            in
+            let (p1, p2, ctx_len) =
+                match premises with
+                | [(ctx_len, (e1, _, _, pos))] ->
+                        if ctx_len <> 1 then raise (AbsError (ctx_len, 1, pos));
+                        begin match e1 with
+                        | DeriveTo (p1, p2, _) -> (p1, p2, ctx_len)
+                        (*| _ -> judg_error*)
+                        end
+                | _ -> raise (Premise_num_error (List.length premises, 1))
+            in
+
+            let m = meta (0, [lvarvar 0]) in
+            let n = meta (1, [lvarvar 0]) in
             (* premise: (x) [M[x] -> N[x]] *)
             (* conclusion: \(x)[M[x]] -> \(x)[N[x]] *)
-            let pattern = [mabs (judgement (m, n))] in
-            let concl_pattern = judgement (labs m, labs n) in
-            check_deriv pattern exprs (concl_pattern, concl)
+            let pp1, pp2 = (m, n) in
+            let cp1, cp2 = (labs m, labs n) in
+            unify [(cp1, c1, 0); (cp2, c2, 0); (pp1, p1, ctx_len); (pp2, p2, ctx_len)]
     | LETREC ->
-            let e1_xy = meta (0, [bound_id 1; bound_id 0]) in
-            let e2 = meta (1, [bound_id 0]) in
-            let e1_xz = meta (0, [bound_id 0; bound_id 1]) in
-            let concl_pattern =
-                (* let rec x y = E1[x,y] in E2[x] ->
-                 * E2[\z. let rec x y = E1[x,z] in E1[x,z]]*)
-                judgement (letrec (e1_xy, e2),
-                meta (1, [labs (letrec (e1_xy, e1_xz))]))
+            let (c1, c2) =
+                match concl with
+                | DeriveTo (c1, c2, _) -> (c1, c2)
+                (* | _ -> error *)
             in
-            check_deriv [] [] (concl_pattern, concl)
+            let () =
+                match premises with
+                | [] -> ()
+                | _ -> raise (Premise_num_error (List.length premises, 0))
+            in
+            let e1_xy = meta (0, [lvarvar 1; lvarvar 0]) in
+            let e2 = meta (1, [lvarvar 0]) in
+            let e1_xz = meta (0, [lvarvar 0; lvarvar 1]) in
+                (* let rec x y = E1[x,y] in E2[x] ->
+                 * E2[\z. let rec x y = E1[x,y] in E1[x,z]]*)
+            let cp1 = letrec (e1_xy, e2) in
+            let cp2 = meta (1, [labs (letrec (e1_xy, e1_xz))]) in
+            unify [(cp1, c1, 0); (cp2, c2, 0)]
 
-
-let current = ref 0
-(* substitute without shift *)
-let rec substitute_node id sub node =
-    let app = substitute_node id sub in
-    let updated = 
-        match node.term with
-        | LetRec (t1, t2) ->
-               LetRec (substitute_node (id + 2) sub t1,
-                       substitute_node (id + 1) sub t2)
-        | Mabs t -> Mabs (substitute_node (id + 1) sub t)
-        | Labs t -> Labs (substitute_node (id + 1) sub t)
-        | App (t1, t2) -> App (app t1, app t2)
-        | Judgement (t1, t2) -> Judgement (app t1, app t2)
-        | BoundId bid when bid = id -> sub
-        | BoundId _
-        | Metavar _ 
-        | AStr _
-        | FreeId _ -> node.term
-    in
-    { node with term = updated }
-
-let rec substitute_expr id sub expr =
-    match expr with
-    | Expr(concl, rule, exprs, pos) ->
-            let new_concl = substitute_node id sub concl in
-            let new_exprs = List.map (substitute_expr id sub) exprs in
-            Expr(new_concl, rule, new_exprs, pos)
-    | AExpr(expr, pos) -> AExpr(substitute_expr (id + 1) sub expr, pos)
-
-let rec check_ast ast =
-    let rec get_inner_expr expr depth =
-        match expr with
-        | Expr (concl, rule, exprs, pos) -> (concl, rule, exprs, pos, depth)
-        | AExpr (e, _) -> get_inner_expr e (depth + 1)
-    in
-    let (concl, (Rule(rule, _)), exprs, pos, depth) = get_inner_expr ast 0 in
-    let rec apply_sub sub_func depth idx arg =
-        if depth = 0 then
-           arg
-        else
-            let sub_free = AStr ("_" ^ (string_of_int idx)) in
-            let substituted = sub_func (depth - 1) sub_free arg in
-            apply_sub sub_func (depth - 1) (idx + 1) substituted
-    in
-    let sub_concl = apply_sub substitute_node depth !current concl in
-    let sub_exprs = List.map (apply_sub substitute_expr depth !current) exprs in
-    current := !current + depth;
+let rec check_ast (concl, (rule, _), premises, pos) threshold =
     try
-        let result = match_rule sub_concl sub_exprs rule in
+        let prems = match premises with Empty -> [] | Premises l -> l in
+        let result = match_rule concl prems rule in
         match result with
         | Some _ ->
-                ignore (check_premises sub_exprs)
+                (* ignore the number of abstractions on the top of the tree
+                 * the bound variables by these ones are thus seen as free
+                 * variables *)
+                List.iter (fun (_, ast) -> check_ast ast threshold) prems
         | None ->
                 print_string (print_info pos);
                 print_string (":\nExpression doesn't match the pattern of " 
                             ^ (rule_name rule) ^ "\n")
     with
-        Premise_num_error (given, expect) ->
+        | Premise_num_error (given, expect) ->
                 print_string (print_info pos);
                 print_string
                 (":\nPremises number mismatch: " ^
-                (string_of_int (given - 1)) ^ " given, but " ^
-                (string_of_int (expect - 1)) ^ " expected for the rule " ^
+                (string_of_int given) ^ " given, but " ^
+                (string_of_int expect) ^ " expected for the rule " ^
                 (rule_name rule) ^ "\n")
+        | AbsError (given, expect, pos) ->
+                print_string (print_info pos);
+                print_string
+                (":\nAbstractions number mismatch:\n" ^
+                "This judgement is nested " ^ (string_of_int given) ^
+                " time(s), but the rule " ^ (rule_name rule) ^ " expect a " ^
+                (string_of_int expect) ^ " time(s) nested judgement for this premise\n")
 
-and check_premises exprs =
-    match exprs with
-    | [] -> ()
-    | h :: t -> check_ast h
+

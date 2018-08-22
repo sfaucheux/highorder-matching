@@ -8,7 +8,7 @@ let _ =
     try
         let result = Parser.entrypoint Lexer.token lexbuf in
         (*print_graph result;*)
-        check_ast result
+        check_ast result 0
     with
     | Parser.Error ->
             let error =

@@ -7,14 +7,12 @@ let print_meta met =
 let print_meta_par met par =
     (print_meta met) ^ "[" ^
     (String.concat "," par ^ "]")
-let print_bound id =
-    "B(" ^ (string_of_int id) ^ ")"
-let print_fid str =
-    "F(" ^ str ^ ")"
+let print_var id =
+    (string_of_int id)
+let print_lvar str =
+    "V(" ^ str ^ ")"
 let print_astr str =
     str
-let print_mabs node =
-    "()[ " ^ node ^ " ]"
 let print_app n1 n2 =
     "(" ^ n1 ^ " " ^ n2 ^ ")"
 let print_letrec n1 n2 =
@@ -34,14 +32,10 @@ let rec print_node n =
             print_letrec (print_node n1) (print_node n2)
     | App (n1, n2) ->
             print_app (print_node n1) (print_node n2)
-    | Judgement(n1, n2) ->
-            print_judg (print_node n1) (print_node n2)
-    | FreeId n ->
-            print_fid (print_node n)
-    | Mabs n ->
-            print_mabs (print_node n)
-    | BoundId id ->
-            print_bound id
+    | LVar n ->
+            print_lvar (print_node n)
+    | Var id ->
+            print_var id
     | Metavar (id, par) ->
             print_meta_par id (List.map print_node par)
     | AStr id ->
@@ -51,14 +45,13 @@ let rec print_node n =
 let rec print_ctx_gen meta_printer ctx =
     match ctx with
     | Proj n -> "π" ^ (string_of_int n)
-    | CFreeId m -> print_fid (meta_printer m)
+    | CLVar m -> print_lvar (meta_printer m)
     | CStr s -> print_astr s
-    | Cabs m -> print_mabs (meta_printer m)
+    | CVar id -> print_var id
     (* constructors *)
     | CLabs m -> print_labs (meta_printer m)
     | CApp (m1, m2) -> print_app (meta_printer m1) (meta_printer m2)
     | CLetRec (m1, m2) -> print_letrec (meta_printer m1) (meta_printer m2)
-    | CJudgment (m1, m2) -> print_judg (meta_printer m1) (meta_printer m2)
     | Closed node -> (print_node node)
 
 (* print a context with id for metavariable *)
